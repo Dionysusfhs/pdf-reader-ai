@@ -223,12 +223,16 @@
     try {
       const page = await state.pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale: state.scale });
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
       wrap.style.width = viewport.width + "px";
       wrap.style.height = viewport.height + "px";
 
       const canvas = document.createElement("canvas");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      // render at physical resolution for sharp text on Retina / HiDPI
+      canvas.width = Math.floor(viewport.width * dpr);
+      canvas.height = Math.floor(viewport.height * dpr);
+      canvas.style.width = viewport.width + "px";
+      canvas.style.height = viewport.height + "px";
       wrap.appendChild(canvas);
 
       const textLayer = document.createElement("div");
@@ -241,7 +245,11 @@
       hlLayer.className = "highlight-layer";
       wrap.appendChild(hlLayer);
 
-      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      await page.render({
+        canvasContext: canvas.getContext("2d"),
+        viewport,
+        transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+      }).promise;
       const textContent = await page.getTextContent();
       await pdfjsLib.renderTextLayer({
         textContentSource: textContent,
