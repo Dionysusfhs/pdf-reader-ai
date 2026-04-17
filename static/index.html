@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF Reader AI · 阅读 · 标注 · 对话</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <!-- PDF.js core + text-layer CSS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/web/pdf_viewer.min.css" />
+  <!-- Marked for rendering assistant markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-badge">PDF</span>
+      <span>Reader AI</span>
+    </div>
+    <div class="doc-controls">
+      <select id="docSelect" title="已打开的文档"></select>
+      <button id="uploadBtn" class="btn ghost" title="上传 PDF">＋ 打开 PDF</button>
+      <input id="fileInput" type="file" accept="application/pdf" hidden />
+      <button id="deleteDocBtn" class="btn ghost danger" title="删除当前文档" disabled>删除</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="reader-controls">
+      <button id="prevPage" class="btn mini" disabled>◀</button>
+      <span class="pageinfo"><input id="pageInput" type="number" min="1" value="1" /> / <span id="pageTotal">0</span></span>
+      <button id="nextPage" class="btn mini" disabled>▶</button>
+      <span class="sep"></span>
+      <button id="zoomOut" class="btn mini">−</button>
+      <span id="zoomLabel" class="zoomlabel">100%</span>
+      <button id="zoomIn" class="btn mini">+</button>
+    </div>
+    <button id="settingsBtn" class="btn ghost" title="设置">⚙</button>
+  </header>
+
+  <main class="main">
+    <section id="viewer" class="viewer">
+      <div id="empty" class="empty">
+        <h2>还没有打开的 PDF</h2>
+        <p>点击右上角 <b>＋ 打开 PDF</b> 上传桌面上的文件<br/>例如 <code>WaveCrest.pdf</code></p>
+      </div>
+      <div id="pages" class="pages"></div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="tabs">
+        <button class="tab active" data-tab="kb">知识库</button>
+        <button class="tab" data-tab="chat">对话</button>
+      </div>
+
+      <div class="tab-panel active" data-panel="kb">
+        <div class="panel-header">
+          <h3>已标注片段</h3>
+          <span id="kbCount" class="badge">0</span>
+        </div>
+        <div id="kbList" class="kb-list"></div>
+        <div class="panel-empty" id="kbEmpty">
+          选中 PDF 中的文字，会在这里生成摘要卡片，形成你的知识库。
+        </div>
+      </div>
+
+      <div class="tab-panel" data-panel="chat">
+        <div class="panel-header">
+          <h3>与文档对话</h3>
+          <button id="clearChatBtn" class="btn mini ghost">清空</button>
+        </div>
+        <div id="chatList" class="chat-list"></div>
+        <div id="chatSelectionChip" class="selection-chip hidden"></div>
+        <form id="chatForm" class="chat-form">
+          <textarea id="chatInput" placeholder="基于当前文档、你标注的知识片段和当前页原文提问…   ⏎ 发送，Shift+⏎ 换行" rows="2"></textarea>
+          <div class="chat-actions">
+            <label class="muted"><input type="checkbox" id="useSelection" /> 把当前选中文字作为提问上下文</label>
+            <button type="submit" class="btn primary" id="sendBtn">发送</button>
+          </div>
+        </form>
+      </div>
+    </aside>
+  </main>
+
+  <!-- floating selection toolbar -->
+  <div id="selToolbar" class="sel-toolbar hidden">
+    <button data-act="summarize">📝 总结</button>
+    <button data-act="highlight">⭐ 加入知识库</button>
+    <button data-act="ask">💬 问 AI</button>
+  </div>
+
+  <!-- settings dialog -->
+  <dialog id="settingsDialog" class="dialog">
+    <form method="dialog" id="settingsForm">
+      <h3>模型设置</h3>
+      <label>供应商
+        <select name="provider">
+          <option value="openai">OpenAI</option>
+          <option value="compatible">OpenAI 兼容（DeepSeek / 通义 / Ollama / 本地网关…）</option>
+        </select>
+      </label>
+      <label>Base URL
+        <input name="base_url" type="text" placeholder="https://api.openai.com/v1" />
+      </label>
+      <label>API Key
+        <input name="api_key" type="password" placeholder="sk-…（保存在本地数据库）" />
+        <small id="keyStatus" class="muted"></small>
+      </label>
+      <label>Model
+        <input name="model" type="text" placeholder="gpt-4o-mini / deepseek-chat / qwen-plus …" />
+      </label>
+      <div class="row">
+        <label class="flex1">Temperature
+          <input name="temperature" type="number" step="0.1" min="0" max="2" value="0.3" />
+        </label>
+        <label class="flex1">回复语言
+          <select name="language">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn ghost">取消</button>
+        <button id="saveSettings" value="save" class="btn primary">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
